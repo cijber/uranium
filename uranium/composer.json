@@ -1,0 +1,21 @@
+{
+  "name": "cijber/uranium",
+  "description": "Best looking inside a glass cabinet",
+  "minimum-stability": "stable",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "eater",
+      "email": "=@eater.me"
+    }
+  ],
+  "require": {
+    "psr/log": "3.0.0",
+    "monolog/monolog": "2.3.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Cijber\\Uranium\\": "src/"
+    }
+  }
+}

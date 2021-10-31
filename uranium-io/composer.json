@@ -1,0 +1,21 @@
+{
+  "name": "cijber/uranium-fs",
+  "description": "Filesystem support for Uranium",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "eater",
+      "email": "=@eater.me"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Cijber\\Uranium\\IO\\": "src"
+    }
+  },
+  "require": {
+    "cijber/uranium": "*"
+  }
+}
