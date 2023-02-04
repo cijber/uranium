@@ -2,11 +2,11 @@
 
 namespace Cijber\Uranium\IO\Filesystem;
 
-use Cijber\Uranium\IO\Stream;
+use Cijber\Uranium\IO\PhpStream;
 
 
-class File extends Stream {
-    public function __construct($stream) {
+class File extends PhpStream {
+    public function __construct($stream, private string $path) {
         parent::__construct($stream);
     }
 }

@@ -2,10 +2,12 @@
 
 namespace Cijber\Uranium\Monitor;
 
+use Cijber\Uranium\Executor\FiberExecutor;
+use Cijber\Uranium\Loop;
 use Cijber\Uranium\Task\LoopTask;
 use Cijber\Uranium\Task\Task;
-use Cijber\Uranium\Timer\Duration;
-use Cijber\Uranium\Timer\Instant;
+use Cijber\Uranium\Time\Duration;
+use Cijber\Uranium\Time\Instant;
 
 
 class Monitor {
@@ -15,7 +17,8 @@ class Monitor {
     private $lastSwitch = null;
     public ?Task $lastTask = null;
 
-    public function __construct() {
+    public function __construct(private Loop $loop) {
+
     }
 
     public function switchTask(?Task $to) {
@@ -26,7 +29,7 @@ class Monitor {
         $from           = $this->lastTask;
         $this->lastTask = $to;
 
-        echo "Switching from " . ($from === null ? "ROOT" : $from->getName()) . " to " . ($to === null ? "ROOT" : $to->getName()) . "\n";
+        echo "Switching from " . ($from === null ? "ROOT" : $from->getName()) . " to " . ($to === null ? "ROOT" : $to->getName()) . ' [' . $this->loop->getExecutor()->openFibers() . "]\n";
 
         $data       = getrusage(0);
         $systemTime = Duration::milliseconds($data['ru_stime.tv_usec']);

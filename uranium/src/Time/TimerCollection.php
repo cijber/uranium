@@ -1,17 +1,21 @@
 <?php
 
-namespace Cijber\Uranium\Timer;
+namespace Cijber\Uranium\Time;
 
+use Cijber\Uranium\EventLoop\EventLoop;
 use Generator;
 
 
 class TimerCollection {
     private array $disabledTimers = [];
     private array $ownedTimers = [];
+    private array $nativeTimers = [];
     private TimerHeap $heap;
 
 
-    public function __construct() {
+    public function __construct(
+      public EventLoop $eventLoop
+    ) {
         $this->heap = new TimerHeap();
     }
 
@@ -19,10 +23,18 @@ class TimerCollection {
         $this->ownedTimers[spl_object_id($timer)] = $timer;
         $timer->setOwner($this);
         if ($timer->isEnabled()) {
-            $this->heap->insert($timer);
+            $this->insertTimer($timer);
             $timer->setSleeping();
         } else {
             $this->disabledTimers[spl_object_id($timer)] = $timer;
+        }
+    }
+
+    private function insertTimer(Timer $timer) {
+        if ($this->eventLoop->hasNativeTimers()) {
+            $this->eventLoop->addWaker($timer->createWaker());
+        } else {
+            $this->heap->insert($timer);
         }
     }
 
@@ -35,12 +47,17 @@ class TimerCollection {
         if ( ! isset($this->disabledTimers[$id])) {
             $timer->setSleeping();
 
+            if ($this->eventLoop->hasNativeTimers()) {
+                $this->eventLoop->addWaker($timer->createWaker());
+            }
+
             return;
         }
 
         unset($this->disabledTimers[$id]);
-        $this->heap->insert($timer);
+
         $timer->setSleeping();
+        $this->insertTimer($timer);
     }
 
     /**

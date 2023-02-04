@@ -31,4 +31,8 @@ class TaskQueue {
     public function isEmpty() {
         return $this->queue->isEmpty();
     }
+
+    public function __clone(): void {
+        $this->queue = clone $this->queue;
+    }
 }

@@ -34,7 +34,7 @@ include __DIR__ . "/../vendor/autoload.php";
 
 use Cijber\Uranium\IO\Stream;
 use Cijber\Uranium\Uranium;
-use Cijber\Uranium\Timer\Duration;
+use Cijber\Uranium\Time\Duration;
 
 $stdin = Stream::stdin();
 
@@ -70,7 +70,7 @@ these `Uranium::app` can be used, which will run the event loop until no tasks a
 include __DIR__ . "/../vendor/autoload.php";
 
 use Cijber\Uranium\IO\Stream;
-use Cijber\Uranium\Timer\Duration;
+use Cijber\Uranium\Time\Duration;
 use Cijber\Uranium\Uranium;
 
 

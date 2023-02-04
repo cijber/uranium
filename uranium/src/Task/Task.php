@@ -4,10 +4,15 @@ namespace Cijber\Uranium\Task;
 
 
 use Cijber\Uranium\Executor\Executor;
+use Cijber\Uranium\Utils\CancellationException;
 use Cijber\Uranium\Waker\TaskWaker;
+use Cijber\Uranium\Waker\Waker;
+use JsonSerializable;
+use Throwable;
 
 
-abstract class Task {
+abstract class Task implements JsonSerializable
+{
     const PENDING  = 0;
     const RUNNING  = 1;
     const SLEEPING = 3;
@@ -22,52 +27,68 @@ abstract class Task {
     protected mixed $thrown = null;
     protected int $id = 0;
 
+    /** @var Waker[] */
+    protected array $relatedWakers = [];
+
     protected string $name;
 
     protected ?Executor $executor = null;
 
-    public function __construct() {
+    public function __construct(?string $name = null)
+    {
         $this->id   = static::$idTracker++;
         $this->name = "Task#" . $this->id;
+
+        if ($name !== null) {
+            $this->name = $name . " (" . $this->name . ")";
+        }
     }
 
-    public function getId(): int {
+    public function getId(): int
+    {
         return $this->id;
     }
 
-    public function name(string $name): self {
+    public function name(string $name): self
+    {
         $this->name = $name;
 
         return $this;
     }
 
-    public function isFinished(): bool {
+    public function isFinished(): bool
+    {
         return $this->status > Task::QUEUED;
     }
 
-    public function setExecutor(?Executor $executor): void {
+    public function setExecutor(?Executor $executor): void
+    {
         $this->executor = $executor;
     }
 
     /**
      * @internal
      */
-    public function wakeUp() {
+    public function wakeUp()
+    {
         $this->status = Task::QUEUED;
     }
 
     /**
      * @internal
      */
-    public function putToSleep() {
+    public function putToSleep()
+    {
         $this->status = Task::SLEEPING;
     }
 
-    public function getStatus(): int {
+    public function getStatus(): int
+    {
         return $this->status;
     }
 
-    public function return(): mixed {
+    public function return(): mixed
+    {
         switch ($this->getStatus()) {
             case Task::DONE:
                 return $this->return;
@@ -78,7 +99,8 @@ abstract class Task {
         }
     }
 
-    public function __debugInfo(): ?array {
+    public function __debugInfo(): ?array
+    {
         return [
           'id'     => $this->id,
           'name'   => $this->name,
@@ -97,19 +119,33 @@ abstract class Task {
 
     public abstract function run();
 
-    public function finish() {
+    public function throw(Throwable $throwable): void
+    {
+        $this->executor->throw($this, $throwable);
+    }
+
+    public function cancel(): void
+    {
+        $this->throw(new CancellationException());
+    }
+
+    public function finish()
+    {
         $this->executor->finish();
     }
 
-    public static function named(string $name, callable $func): Task {
+    public static function named(string $name, callable $func): Task
+    {
         return (new CallbackTask($func))->name($name);
     }
 
-    public function getName() {
+    public function getName()
+    {
         return $this->name;
     }
 
-    public function __clone(): void {
+    public function __clone(): void
+    {
         $this->id       = static::$idTracker++;
         $this->name     = "Task#" . $this->id . ' (copied from ' . $this->name . ')';
         $this->status   = Task::PENDING;
@@ -118,7 +154,23 @@ abstract class Task {
         $this->thrown   = null;
     }
 
-    public function createWaker() {
+    public function createWaker(): TaskWaker
+    {
         return new TaskWaker($this);
+    }
+
+    public function addWaker(Waker $waker)
+    {
+        $this->relatedWakers[] = $waker;
+    }
+
+    public function getRelatedWakers(): array
+    {
+        return $this->relatedWakers;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return $this->__debugInfo();
     }
 }

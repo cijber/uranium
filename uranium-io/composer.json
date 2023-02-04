@@ -1,6 +1,6 @@
 {
-  "name": "cijber/uranium-fs",
-  "description": "Filesystem support for Uranium",
+  "name": "cijber/uranium-io",
+  "description": "IO support for Uranium",
   "minimum-stability": "dev",
   "prefer-stable": true,
   "license": "MIT",
@@ -16,6 +16,10 @@
     }
   },
   "require": {
-    "cijber/uranium": "*"
+    "cijber/uranium": "*",
+    "cijber/collections": "*"
+  },
+  "suggest": {
+    "cijber/uranium-dns": "for async DNS request (and more control)"
   }
 }

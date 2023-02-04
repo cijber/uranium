@@ -4,7 +4,7 @@
 include __DIR__ . "/../vendor/autoload.php";
 
 use Cijber\Uranium\IO\Stream;
-use Cijber\Uranium\Timer\Duration;
+use Cijber\Uranium\Time\Duration;
 use Cijber\Uranium\Uranium;
 
 

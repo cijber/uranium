@@ -2,7 +2,7 @@
 
 namespace Cijber\Uranium\Monitor;
 
-use Cijber\Uranium\Timer\Duration;
+use Cijber\Uranium\Time\Duration;
 
 
 class TaskUsage {

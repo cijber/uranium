@@ -4,16 +4,19 @@ namespace Cijber\Uranium\Executor;
 
 use Cijber\Uranium\Loop;
 use Cijber\Uranium\Task\Task;
+use Throwable;
 
 
 class NestedExecutor implements Executor {
     private ?Loop $loop = null;
     private ?Task $current = null;
+    private array $throwables = [];
 
     public function execute(Task $task) {
         $task->setExecutor($this);
 
         if ($task->getStatus() === Task::PENDING) {
+            $this->loop->getMonitor()?->switchTask($task);
             $task->run();
             $task->return();
         } else {
@@ -25,16 +28,30 @@ class NestedExecutor implements Executor {
         return $this->current;
     }
 
-
     public function suspend() {
         $this->loop->getMonitor()?->switchTask($this->loop->getLoopTask());
-        $task          = $this->current();
+        $task = $this->current();
+
         $this->current = $this->loop->getLoopTask();
 
         $task->putToSleep();
 
+        $throwable = null;
+
         while ( ! $task->isFinished() && $task->getStatus() !== Task::QUEUED) {
             $this->loop->poll();
+
+            if (isset($this->throwables[$task->getId()])) {
+                $throwable = $this->throwables[$task->getId()];
+                unset($this->throwables[$task->getId()]);
+                break;
+            }
+        }
+
+        $this->loop->getMonitor()?->switchTask($task);
+        $this->current = $task;
+        if ($throwable !== null) {
+            throw $throwable;
         }
     }
 
@@ -43,5 +60,13 @@ class NestedExecutor implements Executor {
     }
 
     public function finish() {
+    }
+
+    public function throw(Task $task, Throwable $throwable) {
+        if ($this->current() === $task) {
+            throw $throwable;
+        }
+
+        $this->throwables[$task->getId()] = $throwable;
     }
 }

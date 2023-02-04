@@ -4,26 +4,18 @@ namespace Cijber\Uranium\IO;
 
 use Cijber\Uranium\IO\Utils\LineReader;
 use Cijber\Uranium\Loop;
-use Cijber\Uranium\Waker\StreamWaker;
+use JetBrains\PhpStorm\Pure;
+use RuntimeException;
 
 
-class Stream {
-    const CHUNK_SIZE = 4096;
+abstract class Stream
+{
+    const CHUNK_SIZE = 1_000_000;
 
     protected Loop $loop;
 
-    public function __construct(protected $stream, ?Loop $loop = null) {
-        $this->loop = $loop ?: Loop::get();
-
-        if (stream_set_blocking($this->stream, false) !== true) {
-            throw new \RuntimeException("ah");
-        }
-
-        stream_set_read_buffer($this->stream, 0);
-        stream_set_write_buffer($this->stream, 0);
-    }
-
-    public function slurp(): string {
+    public function slurp(): string
+    {
         $data = "";
         while ( ! $this->eof()) {
             $data .= $this->read();
@@ -32,11 +24,28 @@ class Stream {
         return $data;
     }
 
-    public function eof(): bool {
-        return feof($this->stream);
+    abstract public function waitReadable(): bool;
+
+    abstract public function waitWritable(): bool;
+
+    abstract public function eof(): bool;
+
+    abstract public function read(int $size = 4096): string;
+
+    abstract public function write(string $data, ?int $size = 0): int;
+
+    abstract public function close();
+
+    abstract public function flush();
+
+    #[Pure]
+    public function lines(): LineReader
+    {
+        return new LineReader($this);
     }
 
-    public function writeAll(string $data) {
+    public function writeAll(string $data)
+    {
         $toWrite = strlen($data);
 
         while ($toWrite > 0) {
@@ -47,99 +56,47 @@ class Stream {
         }
     }
 
-    public function write(string $data, ?int $size = null): int {
-        $size = $size ?? strlen($data);
-
-        while (true) {
-            $this->loop->suspend(StreamWaker::write($this->stream));
-
-            $error = null;
-            set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$error) {
-                $error = new \ErrorException(
-                  $errstr,
-                  0,
-                  $errno,
-                  $errfile,
-                  $errline
-                );
-            });
-
-            $writtenNow = fwrite($this->stream, $data);
-
-            restore_error_handler();
-
-            if (($writtenNow === 0 || $writtenNow === false) && $error !== null) {
-                throw new \RuntimeException("Failed to write", previous: $error);
-            }
-
-            if ($writtenNow > 0) {
-                return $writtenNow;
-            }
-        }
-    }
-
-    public function readExact(int $size): string {
+    public function readExact(int $size): string
+    {
         $data     = "";
         $dataSize = 0;
         while ($dataSize < $size) {
             $nextChunk = min($size - $dataSize, Stream::CHUNK_SIZE);
-            $chunk     = $this->read($nextChunk);;
-            $dataSize += strlen($chunk);
-            $data     .= $chunk;
+            $chunk     = $this->read($nextChunk);
+            $dataSize  += strlen($chunk);
+            $data      .= $chunk;
         }
 
         return $data;
     }
 
-    public function read(int $size = 4096): string {
-        while (true) {
-            $this->loop->suspend(StreamWaker::read($this->stream));
-
-            $error = null;
-            set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$error) {
-                $error = new \ErrorException(
-                  $errstr,
-                  0,
-                  $errno,
-                  $errfile,
-                  $errline
-                );
-            });
-            $data = stream_get_contents($this->stream, $size);
-            restore_error_handler();
-
-            if ($error !== null) {
-                throw new \RuntimeException("Failed to read", previous: $error);
-            }
-
-            if ($data !== "" || $this->eof()) {
-                return $data;
-            }
-        }
-    }
-
-    public static function fd(int $fd, string $mode = 'r+'): Stream {
-        $fd = fopen("php://fd/" . $fd, $mode);
-        if ($fd === false) {
-            throw new \RuntimeException("Failed to open fd " . $fd);
+    public static function fd(int $stream, string $mode = 'r+'): Stream
+    {
+        $stream = fopen("php://fd/" . $stream, $mode);
+        if ($stream === false) {
+            throw new RuntimeException("Failed to open fd " . $stream);
         }
 
-        return new Stream($fd);
+        return new PhpStream($stream);
     }
 
-    public static function stdin(): Stream {
+    public static function stdin(): Stream
+    {
         return Stream::fd(0, 'r');
     }
 
-    public static function stdout(): Stream {
+    public static function stdout(): Stream
+    {
         return Stream::fd(1, 'w');
     }
 
-    public static function stderr(): Stream {
+    public static function stderr(): Stream
+    {
         return Stream::fd(2, 'w');
     }
 
-    public function lines(): LineReader {
-        return new LineReader($this);
+    public function __destruct()
+    {
+        $this->close();
     }
 }

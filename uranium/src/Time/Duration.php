@@ -1,9 +1,19 @@
 <?php
 
-namespace Cijber\Uranium\Timer;
+namespace Cijber\Uranium\Time;
 
 class Duration {
     const NANOSECONDS_IN_SECS = 1_000_000_000;
+
+    public static function ensure(int|float|Duration &$duration) {
+        if (is_int($duration)) {
+            $duration = Duration::seconds($duration);
+        }
+
+        if (is_float($duration)) {
+            $duration = Duration::fromFloat($duration);
+        }
+    }
 
     public static function seconds(int $secs) {
         return new Duration($secs, 0);
@@ -40,6 +50,14 @@ class Duration {
         return $this->nanoseconds;
     }
 
+    public function asFloat(): float {
+        return $this->seconds + ($this->nanoseconds / Duration::NANOSECONDS_IN_SECS);
+    }
+
+    public static function fromFloat(float $seconds): Duration {
+        return new Duration((int)floor($seconds), (int)(($seconds % 1) * Duration::NANOSECONDS_IN_SECS));
+    }
+
     public function getSeconds(): int {
         return $this->seconds;
     }
@@ -62,5 +80,9 @@ class Duration {
         $this->normalize();
 
         return $this;
+    }
+
+    public function toMicroseconds(): int {
+        return $this->getMicroseconds() + ($this->seconds * 1000_000);
     }
 }

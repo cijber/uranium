@@ -1,0 +1,11 @@
+stack {
+	onion {
+		logger
+		cache
+		fail-over {
+			zone "/etc/zones"
+			hosts "/etc/hosts"
+			proxy "127.0.0.1:53"
+		}
+	}
+}

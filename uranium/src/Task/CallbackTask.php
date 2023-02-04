@@ -7,9 +7,10 @@ use Throwable;
 
 class CallbackTask extends Task {
     public function __construct(
-      private $callback
+      private $callback,
+      ?string $name = null,
     ) {
-        parent::__construct();
+        parent::__construct($name);
     }
 
     public function run() {

@@ -1,7 +1,8 @@
 {
   "name": "cijber/uranium",
   "description": "Best looking inside a glass cabinet",
-  "minimum-stability": "stable",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "license": "MIT",
   "authors": [
     {
@@ -10,12 +11,23 @@
     }
   ],
   "require": {
+    "cijber/collections": "*",
     "psr/log": "3.0.0",
     "monolog/monolog": "2.3.5"
   },
   "autoload": {
     "psr-4": {
       "Cijber\\Uranium\\": "src/"
-    }
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "suggest": {
+    "ext-fiber": "*",
+    "ext-ev": "*"
+  },
+  "require-dev": {
+    "perftools/php-profiler": "1.0.0"
   }
 }

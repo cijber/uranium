@@ -1,6 +1,6 @@
 <?php
 
-namespace Cijber\Uranium\Timer;
+namespace Cijber\Uranium\Time;
 
 use Cijber\Uranium\Utils\Hacks;
 

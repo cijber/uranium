@@ -1,0 +1,10 @@
+stack {
+	onion {
+		logger
+		cache
+		fail-over {
+			hosts "/etc/hosts"
+			forward from="/etc/resolv.conf"
+		}
+	}
+}

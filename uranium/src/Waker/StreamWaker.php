@@ -2,6 +2,7 @@
 
 namespace Cijber\Uranium\Waker;
 
+use Cijber\Uranium\Loop;
 use JetBrains\PhpStorm\Pure;
 
 
@@ -11,8 +12,10 @@ class StreamWaker extends Waker {
 
     public function __construct(
       private $stream,
-      private int $event
+      private int $event,
+      ?Loop $loop = null,
     ) {
+        parent::__construct($loop);
     }
 
     public function getStream() {

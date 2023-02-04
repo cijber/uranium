@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php
+
+include __DIR__ . "/../vendor/autoload.php";
+
+use Cijber\Uranium\Dns\Client;
+use Cijber\Uranium\Uranium;
+
+
+Uranium::app(function () {
+    $system = Client::system();
+    $x      = $system->getAddress("eoc.io");
+
+    var_dump($x);
+});

@@ -1,0 +1,36 @@
+{
+  "name": "cijber/uranium-compat",
+  "description": "Compatability layer for React and Amphp",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "eater",
+      "email": "=@eater.me"
+    }
+  ],
+  "require": {
+    "cijber/uranium": "*"
+  },
+  "require-dev": {
+    "react/event-loop": "v1.2.0",
+    "phpunit/phpunit": "^10",
+    "react/promise": "v2.9.0",
+    "react/stream": "v1.2.0",
+    "cijber/uranium-io": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Cijber\\Uranium\\Compat\\": "src/"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Cijber\\Uranium\\Compat\\Tests\\": "tests/"
+    }
+  }
+}

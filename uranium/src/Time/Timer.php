@@ -1,12 +1,13 @@
 <?php
 
-namespace Cijber\Uranium\Timer;
+namespace Cijber\Uranium\Time;
 
 use Cijber\Uranium\Waker\TimerWaker;
 use Cijber\Uranium\Waker\Waker;
 
 
-class Timer {
+class Timer
+{
     const DISABLED = 0;
     const ORPHANED = 1;
     const SLEEPING = 2;
@@ -15,6 +16,7 @@ class Timer {
     private ?Instant $nextTrigger = null;
     private ?TimerCollection $owner = null;
     private int $status = Timer::DISABLED;
+    private array $wakers = [];
 
     public function __construct(
       private array $action,
@@ -23,18 +25,21 @@ class Timer {
     ) {
     }
 
-    public function setOwner(?TimerCollection $owner): void {
+    public function setOwner(?TimerCollection $owner): void
+    {
         $this->owner = $owner;
     }
 
-    public function enable() {
+    public function enable()
+    {
         $this->nextTrigger = Instant::now()->add($this->time);
         $this->status      = Timer::ORPHANED;
         // TimerCollection will update Timer accordingly
         $this->owner?->queue($this);
     }
 
-    public function retrigger() {
+    public function retrigger()
+    {
         $next = $this->nextTrigger->add($this->time);
         $now  = Instant::now();
         if ($next < $now) {
@@ -46,33 +51,68 @@ class Timer {
         $this->owner?->queue($this);
     }
 
-    public function isRepeating(): bool {
+    public function isRepeating(): bool
+    {
         return $this->repeating;
     }
 
-    public function getNext(): ?Instant {
+    public function getNext(): ?Instant
+    {
         return $this->nextTrigger;
     }
 
-    public function isEnabled(): bool {
+    public function isEnabled(): bool
+    {
         return $this->status !== Timer::DISABLED;
     }
 
-    public function setQueued() {
+    public function setQueued()
+    {
         $this->status = Timer::QUEUED;
     }
 
-    public function setSleeping() {
+    public function setSleeping()
+    {
         $this->status = Timer::SLEEPING;
     }
 
-    public function createWaker(): Waker {
-        $waker = new TimerWaker($this->getNext(), $this);
-        $waker->setAction(...$this->action);
+    public function createWaker(): Waker
+    {
+        $waker                               = new TimerWaker($this->getNext(), $this);
+        $this->wakers[spl_object_id($waker)] = $waker;
+        $waker->addAction(...$this->action);
+
         return $waker;
     }
 
-    public function isSleeping() {
+    public function removeWaker(Waker $waker)
+    {
+        unset($this->wakers[spl_object_id($waker)]);
+    }
+
+    public function cancel()
+    {
+        foreach ($this->wakers as $waker) {
+            $this->owner->eventLoop->removeWaker($waker);
+        }
+
+        $this->wakers = [];
+
+        $this->status = self::DISABLED;
+    }
+
+    public function isSleeping()
+    {
         return $this->status === Timer::SLEEPING;
+    }
+
+    public function getInterval(): Duration
+    {
+        return $this->time;
+    }
+
+    public function getAction(): array
+    {
+        return $this->action;
     }
 }

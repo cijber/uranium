@@ -2,6 +2,9 @@
 
 namespace Cijber\Uranium\Utils;
 
-class ContinuationException extends \RuntimeException {
+use RuntimeException;
+
+
+class ContinuationException extends RuntimeException {
 
 }

@@ -3,17 +3,21 @@
 namespace Cijber\Uranium\EventLoop;
 
 use Cijber\Uranium\Loop;
-use Cijber\Uranium\Timer\Duration;
-use Cijber\Uranium\Timer\Instant;
+use Cijber\Uranium\Time\Duration;
+use Cijber\Uranium\Time\Instant;
 use Cijber\Uranium\Utils\TimerWakerHeap;
 use Cijber\Uranium\Waker\StreamWaker;
 use Cijber\Uranium\Waker\TimerWaker;
 use Cijber\Uranium\Waker\Waker;
+use Psr\Log\LoggerAwareTrait;
 use RuntimeException;
 use SplHeap;
 
 
 class SelectEventLoop implements EventLoop {
+    use LoggerAwareTrait;
+
+
     public array $wakers = [];
     public array $read = [];
     public array $write = [];
@@ -34,17 +38,21 @@ class SelectEventLoop implements EventLoop {
 
     public function addWaker(Waker $waker) {
         if ($waker instanceof StreamWaker) {
-            $id = (int)($waker->getStream());
+            $fd = (int)($waker->getStream());
 
             if ($waker->getEvent() & StreamWaker::READ) {
-                $this->read[$id] = $waker->getStream();
+                $this->read[$fd] = $waker->getStream();
             }
 
             if ($waker->getEvent() & StreamWaker::WRITE) {
-                $this->write[$id] = $waker->getStream();
+                $this->write[$fd] = $waker->getStream();
             }
 
-            $this->wakers[$id] = $waker;
+            if ( ! isset($this->wakers[$fd])) {
+                $this->wakers[$fd] = [];
+            }
+
+            $this->wakers[$fd][spl_object_id($waker)] = $waker;
 
             return;
         }
@@ -61,6 +69,10 @@ class SelectEventLoop implements EventLoop {
     public function poll() {
         $this->handleTimers();
         $this->handleSelect();
+    }
+
+    public function hasNativeTimers(): bool {
+        return false;
     }
 
     public function handleTimers() {
@@ -80,26 +92,81 @@ class SelectEventLoop implements EventLoop {
     }
 
     public function handleSelect() {
-        if (count($this->read) > 0 || count($this->write) > 0 || count($this->except) > 0) {
-            $timeout = $this->getTimeout();
+        $timeout = $this->getTimeout();
 
+        if (count($this->read) > 0 || count($this->write) > 0 || count($this->except) > 0) {
             do {
+
                 $read   = array_values($this->read);
                 $write  = array_values($this->write);
                 $except = array_values($this->except);
             } while (false === stream_select($read, $write, $except, $timeout->getSeconds(), $timeout->getMicroseconds()));
 
             foreach (array_merge($read, $write, $except) as $item) {
-                $waker = $this->wakers[(int)$item];
+                $wakers = $this->wakers[(int)$item];
+
                 unset($this->read[(int)$item]);
                 unset($this->write[(int)$item]);
                 unset($this->wakers[(int)$item]);
-                $this->loop->wake($waker);
+
+                foreach ($wakers as $waker) {
+                    $this->loop->wake($waker);
+                }
             }
+        } else {
+            usleep($timeout->toMicroseconds());
         }
     }
 
     public function isEmpty() {
         return count($this->wakers) === 0 && $this->timerWakerHeap->isEmpty();
+    }
+
+    public function removeWaker(Waker $waker) {
+        if ($waker instanceof StreamWaker) {
+            $stream = $waker->getStream();
+            $fd     = (int)$stream;
+
+            $id = spl_object_id($waker);
+
+            if ( ! isset($this->wakers[$fd][$id])) {
+                return;
+            }
+
+            unset($this->wakers[$fd][$id]);
+
+            if (count($this->wakers[$fd]) > 0) {
+                $isWrite = false;
+                $isRead  = false;
+
+                /** @var StreamWaker $waker */
+                foreach ($this->wakers[$fd] as $waker) {
+                    $isRead  = $isRead || ($waker->getEvent() & StreamWaker::READ) > 0;
+                    $isWrite = $isWrite || ($waker->getEvent() & StreamWaker::WRITE) > 0;
+
+                    if ($isRead && $isWrite) {
+                        break;
+                    }
+                }
+
+                if ($isWrite) {
+                    $this->write[$fd] = $stream;
+                } else {
+                    unset($this->write[$fd]);
+                }
+
+                if ($isRead) {
+                    $this->read[$fd] = $stream;
+                } else {
+                    unset($this->read[$fd]);
+                }
+            } else {
+                unset($this->wakers[$fd]);
+                unset($this->read[$fd]);
+                unset($this->write[$fd]);
+            }
+
+            return;
+        }
     }
 }

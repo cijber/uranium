@@ -4,16 +4,29 @@ namespace Cijber\Uranium\Executor;
 
 use Cijber\Uranium\Loop;
 use Cijber\Uranium\Task\Task;
+use Cijber\Uranium\Utils\CancellationException;
 use Fiber;
+use RuntimeException;
+use Throwable;
 
 
-class FiberExecutor implements Executor {
+class FiberExecutor implements Executor
+{
     private Loop $loop;
+    /** @var Fiber[] */
     private array $fibers = [];
     private ?Task $current = null;
+    private $fiberTasks = [];
     private array $onion = [];
 
-    public function execute(Task $task) {
+    public function dumpTasks()
+    {
+        file_put_contents("/tmp/dump.json", json_encode($this->fiberTasks, JSON_PRETTY_PRINT));
+
+    }
+
+    public function execute(Task $task)
+    {
         $task->setExecutor($this);
         $id = spl_object_id($task);
 
@@ -21,8 +34,10 @@ class FiberExecutor implements Executor {
             $fiber = $this->fibers[$id];
         } else {
             $fiber                              = new Fiber(fn() => $task->run());
-            $this->fibers[spl_object_id($task)] = $fiber;
+            $this->fibers[$id] = $fiber;
         }
+
+        $this->fiberTasks[$id] = $task;
 
         if ($task === $this->current) {
             return;
@@ -35,22 +50,31 @@ class FiberExecutor implements Executor {
         $this->loop->getMonitor()?->switchTask($task);
 
         $this->current = $task;
-        if ($fiber->isStarted()) {
+        if ($fiber->isSuspended()) {
             $fiber->resume();
-        } else {
+        }
+
+        if ( ! $fiber->isStarted()) {
             $fiber->start();
         }
 
         if ($fiber->isTerminated()) {
-            $task->return();
+            try {
+                $task->return();
+            } catch (CancellationException $c) {
+                $task->finish();
+                // ignore
+            }
         }
     }
 
-    public function current(): ?Task {
+    public function current(): ?Task
+    {
         return $this->current;
     }
 
-    public function suspend() {
+    public function suspend()
+    {
         $task = $this->current();
         $task->putToSleep();
         $this->current = array_pop($this->onion);
@@ -58,19 +82,46 @@ class FiberExecutor implements Executor {
     }
 
 
-    public function setLoop(Loop $loop): void {
+    public function setLoop(Loop $loop): void
+    {
         $this->loop = $loop;
     }
 
-    public function finish() {
+    public function finish()
+    {
         if ($this->current() === null) {
             return;
         }
 
-        $task = $this->current();
+        $this->cleanTask($this->current());
 
-        unset($this->fibers[spl_object_id($task)]);
         $this->current = array_pop($this->onion);
         $this->loop->getMonitor()?->switchTask($this->current);
+    }
+
+    public function throw(Task $task, Throwable $throwable)
+    {
+        if ($this->current() === $task) {
+            throw $throwable;
+        }
+
+        if ( ! isset($this->fibers[spl_object_id($task)])) {
+            throw new RuntimeException(":)");
+        }
+
+        $this->fibers[spl_object_id($task)]->throw($throwable);
+    }
+
+    public function openFibers(): int
+    {
+        return count($this->fibers);
+    }
+
+    private function cleanTask(Task $task): void
+    {
+        $this->loop->removeWakersForTask($task);
+
+        unset($this->fibers[spl_object_id($task)]);
+        unset($this->fiberTasks[spl_object_id($task)]);
     }
 }

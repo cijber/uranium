@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<stack>
+    <onion>
+        <logger/>
+        <cache/>
+        <fail-over>
+            <zone-file source="/etc/zone"/>
+
+        </fail-over>
+    </onion>
+</stack>

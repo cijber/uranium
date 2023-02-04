@@ -1,0 +1,21 @@
+{
+  "name": "cijber/collections",
+  "description": "description",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "eater",
+      "email": "=@eater.me"
+    }
+  ],
+  "require-dev": {
+    "phpunit/phpunit": "9.5.10"
+  },
+  "autoload": {
+    "psr-4": {
+      "Cijber\\Collections\\": "src/"
+    }
+  }
+}

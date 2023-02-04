@@ -2,9 +2,10 @@
 
 namespace Cijber\Uranium\Utils;
 
-use Cijber\Uranium\Timer\Duration;
-use Cijber\Uranium\Timer\Instant;
+use Cijber\Uranium\Time\Duration;
+use Cijber\Uranium\Time\Instant;
 use FFI;
+use Throwable;
 
 
 class Hacks {
@@ -43,6 +44,28 @@ HEADER
 
             return new Instant(floor($time), ($time % 1) * Duration::NANOSECONDS_IN_SECS);
         }
+    }
+
+    public static function errorHandler(callable $fn, ?Throwable &$error = null, bool $throw = false) {
+        set_error_handler(function($errno, $errstr, $errfile, $errline) use (&$error) {
+            $error = new \ErrorException(
+              $errstr,
+              0,
+              $errno,
+              $errfile,
+              $errline
+            );
+        });
+
+        $data = $fn();
+
+        restore_error_handler();
+
+        if ($error !== null && $throw) {
+            throw $error;
+        }
+
+        return $data;
     }
 }
 
