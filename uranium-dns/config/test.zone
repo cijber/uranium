@@ -1,0 +1,21 @@
+$ORIGIN eater.me.
+$TTL 300
+
+@  3600  SOA  ap1.dcg.cijber.net. =.eater.me. (
+                         1999022301   ; serial YYYYMMDDnn
+                         86400        ; refresh (  24 hours)
+                         7200         ; retry   (   2 hours)
+                         3600000      ; expire  (1000 hours)
+                         172800 )     ; minimum (   2 days)
+
+
+@ IN NS ap1.dcg.cijber.net.
+@ IN NS eater.cijber.net.
+@ IN HINFO "X86-64/PHP" "VOIDLINUX/2023"
+@ IN A 151.80.47.123
+@ IN MX 10 cijber.mx.
+@ IN TXT "v=spf1 include:_spf.eoc.io -all"
+blog IN CNAME "tamako.eoc.io."
+polyseme IN CNAME "tamako.eoc.io."
+xbps IN CNAME "tamako.eoc.io."
+_keybase IN TXT "keybase-site-verification=j_RnljpkTMlwdMDQ5ft503T0vrNr1GdFgw9XtCPkG4Y"

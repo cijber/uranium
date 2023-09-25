@@ -1,0 +1,6 @@
+stack {
+    onion {
+        cache
+        zone auth=true "./test.zone"
+    }
+}

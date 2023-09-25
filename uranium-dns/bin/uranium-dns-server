@@ -12,7 +12,7 @@ include __DIR__ . "/../vendor/autoload.php";
 Uranium::app(function () {
     echo "Listening on [::]:5354\n";
     $server = Server::listen(5354);
-    $client = Client::default();
+    $client = Client::fromKdlFile(__DIR__ . '/../config/test.kdl');
 
     foreach ($server as $session) {
         Uranium::queue(fn() => session($session, $client));
@@ -21,14 +21,11 @@ Uranium::app(function () {
 
 function session(Session $session, Client $client)
 {
-    echo "New session: " . $session->addr() . "\n";
-
     foreach ($session as $message) {
         $id  = $message->getId();
         $msg = $client->request($message);
         $msg->setId($id);
+
         $session->write($msg);
     }
-
-    echo "Closed session: " . $session->addr() . "\n";
 }

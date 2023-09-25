@@ -20,7 +20,13 @@ class OnionExecutor {
         if (count($this->onion->layers) > $layer) {
             return $this->onion->layers[$layer]->handle($request, fn(?Request $request = null) => $this->next($request, $layer + 1));
         } else {
-            return $this->onion->core->handle($request);
+            $resp = $this->onion->core->handle($request);
+
+            if ($resp === null) {
+                return Response::nxdomain($request);
+            }
+
+            return $resp;
         }
     }
 }

@@ -7,10 +7,11 @@ abstract class PartialRecord
     public ?string $labelString = null;
 
     public function __construct(
-      public array $labels,
-      public int $type,
-      public int $class,
-    ) {
+        public array $labels,
+        public int   $type,
+        public int   $class,
+    )
+    {
     }
 
     public function getLabelString(): string
@@ -25,7 +26,7 @@ abstract class PartialRecord
     public function setLabels(array $labels): void
     {
         $this->labelString = null;
-        $this->labels      = $labels;
+        $this->labels = $labels;
     }
 
     public function getLabels(): array
@@ -43,13 +44,25 @@ abstract class PartialRecord
         return $this->type;
     }
 
+    protected static function writeUncompressedLabels(array $labels): string
+    {
+        $data = "";
+        foreach ($labels as $label) {
+            $data .= chr(strlen($label));
+            $data .= $label;
+        }
+
+        $data .= "\x00";
+        return $data;
+    }
+
     protected function writeLabels(string &$target = "", ?string $source = null, ?array $labels = null): string
     {
         if ($source === null) {
             $source = $target;
         }
 
-        $labels       ??= $this->labels;
+        $labels ??= $this->labels;
         $binaryLabels = [];
         foreach ($labels as $label) {
             $binaryLabels[] = chr(strlen($label)) . $label;

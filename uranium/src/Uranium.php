@@ -29,10 +29,13 @@ class Uranium
     static function app(null|callable|Task $task = null): mixed
     {
         $loop = Loop::get();
-        if ($task !== null) {
-            $task = $loop->queue($task);
+        if ($task === null) {
+            $loop->block();
+
+            return null;
         }
 
+        $task = $loop->queue($task);
 
         while ( ! $task->isFinished()) {
             $loop->block();

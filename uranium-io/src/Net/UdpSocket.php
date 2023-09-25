@@ -10,11 +10,13 @@ use Cijber\Uranium\Utils\Hacks;
 use Cijber\Uranium\Waker\StreamWaker;
 
 
-class UdpSocket extends PhpStream {
+class UdpSocket extends PhpStream
+{
     private string $peerName;
     private bool $dualStack = false;
 
-    public function __construct($stream, ?Loop $loop = null) {
+    public function __construct($stream, ?Loop $loop = null)
+    {
         parent::__construct($stream, $loop);
         $this->peerName = stream_socket_get_name($stream, true);
     }
@@ -22,10 +24,11 @@ class UdpSocket extends PhpStream {
     /**
      * @return string[]
      */
-    public function receiveFrom(int $size = Stream::CHUNK_SIZE): array {
+    public function receiveFrom(int $size = Stream::CHUNK_SIZE): array
+    {
         while (1) {
             $address = null;
-            $data    = Hacks::errorHandler(function() use (&$address, $size) {
+            $data    = Hacks::errorHandler(function () use (&$address, $size) {
                 return stream_socket_recvfrom($this->stream, $size, 0, $address);
             }, $error);
 
@@ -42,7 +45,8 @@ class UdpSocket extends PhpStream {
         }
     }
 
-    public function sendTo(string $data, string $address): int {
+    public function sendTo(string $data, string $address): int
+    {
         while (1) {
             $written = Hacks::errorHandler(fn() => stream_socket_sendto($this->stream, $data, 0, $address), $error);
 
@@ -59,7 +63,8 @@ class UdpSocket extends PhpStream {
         }
     }
 
-    public static function listen(string|Address $address, bool $dualStack = true, ?Loop $loop = null): UdpSocket {
+    public static function listen(string|Address $address, bool $dualStack = true, ?Loop $loop = null): UdpSocket
+    {
         Address::ensure($address);
 
         $loop = $loop ?: Loop::get();
@@ -74,20 +79,22 @@ class UdpSocket extends PhpStream {
 
         $socket = Hacks::errorHandler(fn() => stream_socket_server("udp://" . $address->url(), $_, $_, STREAM_SERVER_BIND, $context), $_, throw: true);
 
-        return new UdpSocket($socket);
+        return new UdpSocket($socket, $loop);
     }
 
-    public static function connect(string|Address $address, ?Loop $loop = null, ?Client $dns = null): UdpSocket {
-        $dns ??= Client::instance($loop);
+    public static function connect(string|Address $address, ?Loop $loop = null, ?Client $dns = null): UdpSocket
+    {
+        $dns       ??= Client::instance($loop);
         $addresses = $dns->resolve($address);
-        $address = $addresses[array_rand($addresses)];
+        $address   = $addresses[array_rand($addresses)];
 
         $socket = Hacks::errorHandler(fn() => stream_socket_client("udp://" . $address->url(), flags: STREAM_CLIENT_ASYNC_CONNECT), throw: true);
 
         return new UdpSocket($socket, loop: $loop);
     }
 
-    public function getPeerName(): string {
+    public function getPeerName(): string
+    {
         return $this->peerName;
     }
 }

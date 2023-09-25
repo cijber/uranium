@@ -209,6 +209,16 @@ class Message {
         }
     }
 
+    /**
+     * @param bool $authoritativeAnswer
+     */
+    public function setAuthoritativeAnswer(bool $authoritativeAnswer): void
+    {
+        $this->authoritativeAnswer = $authoritativeAnswer;
+    }
+
+
+
     public function isNotFound() {
         return $this->responseCode === self::R_NXDOMAIN && count($this->responseRecords) === 0 && count($this->authoritativeRecords) === 1 && $this->authoritativeRecords[0]->type === ResourceType::SOA;
     }

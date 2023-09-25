@@ -19,10 +19,19 @@ use Cijber\Uranium\Loop;
 class Zone extends Source
 {
     private Database $database;
+    private bool $authoritative = false;
 
     public function __construct()
     {
         $this->database = new Database();
+    }
+
+    /**
+     * @param bool $authoritative
+     */
+    public function setAuthoritative(bool $authoritative): void
+    {
+        $this->authoritative = $authoritative;
     }
 
     public function addZoneFile(string $filename, string|array|null $origin = null)
@@ -52,40 +61,61 @@ class Zone extends Source
 
         $rrs = $this->database->get($question, $found);
 
-        if ( ! $found) {
-            if ( ! $request->message->isRecursionDesired()) {
-                $nsQuestion       = clone $question;
-                $nsQuestion->type = ResourceType::NS;
-
-                while (count($nsQuestion->labels) > 0) {
-                    $nsQuestion->setLabels(array_slice($nsQuestion->labels, 1));
-                    $rrs = $this->database->get($nsQuestion, $found);
-
-                    if ($found) {
-                        $addrrs = [];
-
-                        /** @var NS $ns */
-                        foreach ($rrs as $ns) {
-                            $addrrs = array_merge($addrrs, $this->database->get(new QuestionRecord($ns->getDomain(), ResourceType::ANY, ResourceClass::IN)));
-                        }
-
-                        return Response::ok($request, authoritativeRecords: $rrs, additionalRecords: $addrrs);
-                    }
-                }
-            }
-
-            return null;
+        if ($found && count($rrs) > 0) {
+            return Response::ok($request, $rrs);
         }
 
-        return Response::ok($request, $rrs);
+        if ($this->authoritative) {
+            $soaReq = clone $question;
+            $soaReq->type = ResourceType::SOA;
+
+            while (count($soaReq->labels) > 0) {
+                $rrs = $this->database->get($soaReq, $found);
+
+                if ($found && count($rrs) > 0) {
+                    $nxdomain = Response::nxdomain($request);
+                    $nxdomain->message->setAuthoritativeRecords($rrs);
+                    return $nxdomain;
+                }
+
+                $soaReq->setLabels(array_slice($soaReq->labels, 1));
+            }
+        }
+
+        if ($request->message->isRecursionDesired()) {
+            $nsQuestion = clone $question;
+            $nsQuestion->type = ResourceType::NS;
+
+            while (count($nsQuestion->labels) > 0) {
+                $nsQuestion->setLabels(array_slice($nsQuestion->labels, 1));
+                $rrs = $this->database->get($nsQuestion, $found);
+
+                if ($found && count($rrs) > 0) {
+                    $addrrs = [];
+
+                    /** @var NS $ns */
+                    foreach ($rrs as $ns) {
+                        $addrrs = array_merge($addrrs, $this->database->get(new QuestionRecord($ns->getDomain(), ResourceType::ANY, ResourceClass::IN)));
+                    }
+
+                    return Response::ok($request, authoritativeRecords: $rrs, additionalRecords: $addrrs);
+                }
+            }
+        }
+
+        return null;
     }
 
     public static function fromConfig(array $config, Stack $stack, string $cwd, Loop $loop): static
     {
         $zone = new static();
 
+        if (isset($config["properties"]->auth) && $config["properties"]->auth) {
+            $zone->authoritative = true;
+        }
+
         foreach ($config["values"] as $value) {
-            if ( ! str_starts_with($value, "/")) {
+            if (!str_starts_with($value, "/")) {
                 $value = $cwd . '/' . $value;
             }
 

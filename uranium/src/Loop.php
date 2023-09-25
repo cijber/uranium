@@ -321,18 +321,19 @@ class Loop implements LoggerAwareInterface
 
     public function queue(Task|callable $func): Task
     {
-        $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-
-        $trace = $bt[0];
-        if ($bt[0]['file'] === __DIR__ . '/Uranium.php' && count($bt) > 0) {
-            $trace = $bt[1];
-        }
-
         if (is_callable($func)) {
+            $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+
+            $trace = $bt[0];
+            if ($bt[0]['file'] === __DIR__ . '/Uranium.php' && count($bt) > 0) {
+                $trace = $bt[1];
+            }
+
             $task = new CallbackTask($func, $trace['file'] . ':' . $trace['line']);
         } else {
             $task = $func;
         }
+
         $this->queue->queue($task);
 
         return $task;

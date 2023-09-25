@@ -51,7 +51,7 @@ class ResourceRecord extends PartialRecord
             $target         .= "\xFF\xFF";
             $compressedData = $this->getCompressedData($target);
             $dataLen        = strlen($compressedData);
-            $target         .= substr($target, 0, strlen($target) - 2) . chr(($dataLen >> 8) & 255) . chr($dataLen & 255);
+            $target         = substr($target, 0, strlen($target) - 2) . chr(($dataLen >> 8) & 255) . chr($dataLen & 255);
             $target         .= $compressedData;
         } else {
             $data   = $this->getData();

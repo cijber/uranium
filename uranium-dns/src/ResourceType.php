@@ -20,7 +20,7 @@ class ResourceType {
       self::NULL   => ["NULL", ResourceRecord::class],
       self::WKS    => ["WKS", ResourceRecord::class],
       self::PTR    => ["PTR", ResourceRecord::class],
-      self::HINFO  => ["HINFO", ResourceRecord::class],
+      self::HINFO  => ["HINFO", Record\HINFO::class],
       self::MINFO  => ["MINFO", ResourceRecord::class],
       self::MX     => ["MX", Record\MX::class],
       self::TXT    => ["TXT", Record\TXT::class],
